@@ -13,6 +13,15 @@ import (
 	"sync"
 )
 
+func nonil(err ...error) error {
+	for _, err := range err {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Proxy TODO(rjeczalik)
 type Proxy struct {
 	MachineName string // VirtualBox machine name
@@ -53,7 +62,7 @@ func (p *Proxy) Run() error {
 	}
 	p.listener = l
 	p.machineAddr = "192.168.0.14:3389" // TODO(rjeczalik): rm
-	log.Print("proxy listening on", p.listener.Addr())
+	log.Print("proxy listening on ", p.listener.Addr())
 AcceptLoop:
 	for {
 		src, err := p.listener.Accept()
