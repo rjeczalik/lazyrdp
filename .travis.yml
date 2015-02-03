@@ -1,0 +1,18 @@
+language: go
+
+go:
+- 1.4.1
+
+matrix:
+  fast_finish: true
+
+install:
+- export GOBIN=$HOME/bin PATH=$HOME/bin:$PATH
+- go get golang.org/x/tools/cmd/vet
+- go get -t -v ./...
+- go install -a -race std
+
+script:
+- go tool vet -all .
+- go build ./...
+- go test -v ./...
