@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strconv"
 	"sync"
 )
 
@@ -28,9 +29,11 @@ type Proxy struct {
 	Addr        string // network address to listen on, default is ":5000"
 	Port        int    // RDP port of the machine's server, default is 3389
 
-	machineAddr string
-	listener    net.Listener
-	errch       chan error
+	listener net.Listener
+	errch    chan error
+	vbox     *VirtualBox
+	done     int32
+	cnt      uint64
 }
 
 func (p *Proxy) addr() string {
@@ -54,15 +57,28 @@ func (p *Proxy) err() chan error {
 	return p.errch
 }
 
+func (p *Proxy) loop() {
+
+}
+
 // Run TODO(rjeczalik)
 func (p *Proxy) Run() error {
+	vbox, err := NewVirtualBox(p.MachineName)
+	if err != nil {
+		return err
+	}
+	addr, err := vbox.Addr()
+	if err != nil {
+		return err
+	}
 	l, err := InterruptListen("tcp", p.addr())
 	if err != nil {
 		return err
 	}
+	p.vbox = vbox
 	p.listener = l
-	p.machineAddr = "192.168.0.14:3389" // TODO(rjeczalik): rm
-	log.Print("proxy listening on ", p.listener.Addr())
+	addr = addr + ":" + strconv.Itoa(p.port())
+	log.Print("proxy listening on %s, target is %s . . .", p.listener.Addr(), addr)
 AcceptLoop:
 	for {
 		src, err := p.listener.Accept()
@@ -74,7 +90,7 @@ AcceptLoop:
 			log.Print("accept error:", err)
 			continue AcceptLoop
 		}
-		dst, err := net.Dial("tcp", p.machineAddr)
+		dst, err := net.Dial("tcp", addr)
 		if err != nil {
 			src.Close()
 			log.Print("dial error:", err)
@@ -102,10 +118,6 @@ func (p *Proxy) serve(src, dst net.Conn) {
 	wg.Wait()
 	dst.Close()
 	src.Close()
-}
-
-func (p *Proxy) loop() {
-	// TODO(rjeczalik)
 }
 
 // Stop TODO(rjeczalik)
