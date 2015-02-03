@@ -100,6 +100,8 @@ func (p *Proxy) serve(src, dst net.Conn) {
 		wg.Done()
 	}()
 	wg.Wait()
+	dst.Close()
+	src.Close()
 }
 
 func (p *Proxy) loop() {
