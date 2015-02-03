@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-var vbox, vboxerr = NewVirtualBox(os.Getenv("TEST_LAZYRDP"))
+var vbox, vboxerr = NewVirtualBox(os.Getenv("TEST_LAZYVM"))
 
 func connect(addr string) error {
-	conn, err := net.Dial("tcp", addr)
+	conn, err := net.Dial("tcp", addr+":3389") // TODO(rjeczalik): read from TEST_LAZYVM
 	if err != nil {
 		return err
 	}

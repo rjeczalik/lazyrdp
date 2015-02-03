@@ -8,14 +8,24 @@ import (
 	"strings"
 )
 
+// ErrNotExist TODO(rjeczalik)
+var ErrNotExist = errors.New("lazyvm: vm does not exist")
+
 // VirtualBox TODO(rjeczalik)
 type VirtualBox struct {
 	name string
-	addr string
 }
 
+// NewVirtualBox TODO(rjeczalik)
 func NewVirtualBox(name string) (*VirtualBox, error) {
-	return nil, nil
+	vbox := &VirtualBox{name: name}
+	switch ok, err := vbox.exists(); {
+	case err != nil:
+		return nil, err
+	case !ok:
+		return nil, ErrNotExist
+	}
+	return vbox, nil
 }
 
 // Start TODO(rjeczalik)
@@ -39,7 +49,7 @@ func (vbox *VirtualBox) Hibernate() error {
 	if !ok {
 		return nil
 	}
-	return exec.Command("VBoxManage", "modifyvm", vbox.name, "savestate").Run()
+	return exec.Command("VBoxManage", "controlvm", vbox.name, "savestate").Run()
 }
 
 // Close TODO(rjeczalik)
@@ -51,7 +61,7 @@ func (vbox *VirtualBox) Close() error {
 	if !ok {
 		return nil
 	}
-	return exec.Command("VBoxManage", "modifyvm", vbox.name, "acpipowerbutton").Run()
+	return exec.Command("VBoxManage", "controlvm", vbox.name, "acpipowerbutton").Run()
 }
 
 var errParseAddr = errors.New("lazyvm: unable to parse network address")
@@ -80,7 +90,7 @@ func (vbox *VirtualBox) Addr() (string, error) {
 		if i = strings.Index(s, "value:"); i == -1 {
 			continue
 		}
-		s = s[i+1:]
+		s = s[i+len("value:")+1:]
 		if i = strings.IndexByte(s, ','); i == -1 {
 			continue
 		}
@@ -92,8 +102,8 @@ func (vbox *VirtualBox) Addr() (string, error) {
 	return "", nonil(scanner.Err(), errParseAddr)
 }
 
-func (vbox *VirtualBox) running() (bool, error) {
-	out, err := exec.Command("VBoxManage", "list", "runningvms").Output()
+func (vbox *VirtualBox) list(cmd string) (bool, error) {
+	out, err := exec.Command("VBoxManage", "list", cmd).Output()
 	if err != nil {
 		return false, err
 	}
@@ -105,4 +115,12 @@ func (vbox *VirtualBox) running() (bool, error) {
 		}
 	}
 	return false, scanner.Err()
+}
+
+func (vbox *VirtualBox) exists() (bool, error) {
+	return vbox.list("vms")
+}
+
+func (vbox *VirtualBox) running() (bool, error) {
+	return vbox.list("runningvms")
 }

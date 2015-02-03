@@ -30,7 +30,8 @@ USAGE:
 
 EXAMPLE:
 
-	lazyvm -addr localhost:5001 -port 3390 win2012r2`
+	lazyvm -addr localhost:2222 -port 22 ubuntu-ssh
+	lazyvm -addr localhost:5000 -port 3389 windows-rdesktop`
 
 var signals = []os.Signal{
 	os.Kill,
@@ -51,8 +52,8 @@ func init() {
 	}
 	help := flag.Bool("help", false, "")
 	verbose := flag.Bool("v", false, "")
-	flag.StringVar(&proxy.Addr, "addr", ":5000", "")
-	flag.IntVar(&proxy.Port, "port", 3389, "")
+	flag.StringVar(&proxy.Addr, "addr", "", "")
+	flag.IntVar(&proxy.Port, "port", 0, "")
 	flag.Parse()
 	if *help {
 		flag.CommandLine.Usage()
