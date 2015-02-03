@@ -1,4 +1,4 @@
-package lazyrdp
+package lazyvm
 
 import (
 	"bufio"
@@ -54,7 +54,7 @@ func (vbox *VirtualBox) Close() error {
 	return exec.Command("VBoxManage", "modifyvm", vbox.name, "acpipowerbutton").Run()
 }
 
-var errParseAddr = errors.New("lazyrdp: unable to parse network address")
+var errParseAddr = errors.New("lazyvm: unable to parse network address")
 
 // Addr TODO(rjeczalik)
 func (vbox *VirtualBox) Addr() (string, error) {

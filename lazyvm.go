@@ -1,10 +1,10 @@
-// Package lazyrdp provides a proxy for RDP connections, which is capable of
+// Package lazyvm provides a proxy for RDP connections, which is capable of
 // starting / stopping on idle Windows instances through VirtualBox manager.
 //
 // Actually it treats underlying connection as a blackbox, so it can be used
 // with different protocols / OSes. It was just developed for use with rdesktop
 // and Windows.
-package lazyrdp
+package lazyvm
 
 import (
 	"io"

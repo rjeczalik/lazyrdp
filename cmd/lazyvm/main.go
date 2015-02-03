@@ -1,4 +1,4 @@
-// Command lazyrdp provides standalone command line tools for proxying RDP
+// Command lazyvm provides standalone command line tools for proxying RDP
 // connections to VirtualBox's Windows instance. It starts the machine in
 // headless mode, pauses on idle and resumes on new connection.
 package main
@@ -12,10 +12,10 @@ import (
 	"os/signal"
 	"sync"
 
-	"github.com/rjeczalik/lazyrdp"
+	"github.com/rjeczalik/lazyvm"
 )
 
-const usage = `lazyrdp - starts Windows machine on incoming RDP connection
+const usage = `lazyvm - starts a vm on incoming remote session connection
 
 OPTIONS:
 
@@ -25,19 +25,19 @@ OPTIONS:
 
 USAGE:
 
-	lazyrdp -help
-	lazyrdp [OPTION...] MACHINE_NAME
+	lazyvm -help
+	lazyvm [OPTION...] MACHINE_NAME
 
 EXAMPLE:
 
-	lazyrdp -addr localhost:5001 -port 3390 win2012r2`
+	lazyvm -addr localhost:5001 -port 3390 win2012r2`
 
 var signals = []os.Signal{
 	os.Kill,
 	os.Interrupt,
 }
 
-var proxy lazyrdp.Proxy
+var proxy lazyvm.Proxy
 
 func die(v interface{}) {
 	fmt.Fprintln(os.Stderr, v)
@@ -62,11 +62,11 @@ func init() {
 	}
 	switch flag.NArg() {
 	case 0:
-		die("lazydrp: machine name is missing")
+		die("lazyvm: machine name is missing")
 	case 1:
 		proxy.MachineName = flag.Arg(0)
 	default:
-		die("lazydrp: too many arguments")
+		die("lazyvm: too many arguments")
 	}
 }
 

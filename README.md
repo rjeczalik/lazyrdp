@@ -1,2 +1,2 @@
-# lazyrdp
-rdesktop proxy for lazy VirtualBox's Windows instances
+# lazyvm
+Start a vm on incoming remote session connection and put it to sleep on idle.

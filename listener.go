@@ -1,4 +1,4 @@
-package lazyrdp
+package lazyvm
 
 import (
 	"errors"
