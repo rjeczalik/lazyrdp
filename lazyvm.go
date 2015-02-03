@@ -78,7 +78,7 @@ func (p *Proxy) Run() error {
 	p.vbox = vbox
 	p.listener = l
 	addr = addr + ":" + strconv.Itoa(p.port())
-	log.Print("proxy listening on %s, target is %s . . .", p.listener.Addr(), addr)
+	log.Printf("proxy listening on %s, target is %s . . .", p.listener.Addr(), addr)
 AcceptLoop:
 	for {
 		src, err := p.listener.Accept()
