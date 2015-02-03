@@ -71,7 +71,7 @@ func (p *Proxy) Run() error {
 	if err != nil {
 		return err
 	}
-	l, err := InterruptListen("tcp", p.addr())
+	l, err := InterruptibleListen("tcp", p.addr())
 	if err != nil {
 		return err
 	}

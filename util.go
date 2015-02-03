@@ -16,8 +16,8 @@ type listener struct {
 	conn chan net.Conn
 }
 
-// InterruptListen TODO(rjeczalik)
-func InterruptListen(network, addr string) (net.Listener, error) {
+// InterruptibleListen TODO(rjeczalik)
+func InterruptibleListen(network, addr string) (net.Listener, error) {
 	lis, err := net.Listen(network, addr)
 	if err != nil {
 		return nil, err
