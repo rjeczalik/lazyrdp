@@ -73,7 +73,7 @@ func init() {
 
 func sighandler(c <-chan os.Signal) {
 	once := sync.Once{}
-	for range c {
+	for _ = range c {
 		go once.Do(proxy.Stop)
 	}
 }
