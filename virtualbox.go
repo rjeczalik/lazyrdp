@@ -28,9 +28,14 @@ func NewVirtualBox(name string) (*VirtualBox, error) {
 	return vbox, nil
 }
 
+// Running TODO(rjeczalik)
+func (vbox *VirtualBox) Running() (bool, error) {
+	return vbox.list("runningvms")
+}
+
 // Start TODO(rjeczalik)
 func (vbox *VirtualBox) Start() error {
-	ok, err := vbox.running()
+	ok, err := vbox.Running()
 	if err != nil {
 		return err
 	}
@@ -42,7 +47,7 @@ func (vbox *VirtualBox) Start() error {
 
 // Hibernate TODO(rjeczalik)
 func (vbox *VirtualBox) Hibernate() error {
-	ok, err := vbox.running()
+	ok, err := vbox.Running()
 	if err != nil {
 		return err
 	}
@@ -54,7 +59,7 @@ func (vbox *VirtualBox) Hibernate() error {
 
 // Close TODO(rjeczalik)
 func (vbox *VirtualBox) Close() error {
-	ok, err := vbox.running()
+	ok, err := vbox.Running()
 	if err != nil {
 		return err
 	}
@@ -68,13 +73,6 @@ var errParseAddr = errors.New("lazyvm: unable to parse network address")
 
 // Addr TODO(rjeczalik)
 func (vbox *VirtualBox) Addr() (string, error) {
-	ok, err := vbox.running()
-	if err != nil {
-		return "", err
-	}
-	if !ok {
-		return "", errors.New("machine is not started")
-	}
 	out, err := exec.Command("VBoxManage", "guestproperty", "enumerate", vbox.name).Output()
 	if err != nil {
 		return "", err
@@ -119,8 +117,4 @@ func (vbox *VirtualBox) list(cmd string) (bool, error) {
 
 func (vbox *VirtualBox) exists() (bool, error) {
 	return vbox.list("vms")
-}
-
-func (vbox *VirtualBox) running() (bool, error) {
-	return vbox.list("runningvms")
 }

@@ -3,6 +3,7 @@ package lazyvm
 import (
 	"errors"
 	"net"
+	"sync"
 	"sync/atomic"
 )
 
@@ -56,4 +57,33 @@ func (l *listener) Close() error {
 	atomic.StoreInt32(&l.done, 1)
 	l.err <- ErrInterrupted
 	return l.Listener.Close()
+}
+
+type busyconn struct {
+	net.Conn
+	busy   *uint64
+	busywg *sync.WaitGroup
+}
+
+// BusyConn TODO(rjeczalik)
+func BusyConn(c net.Conn, wg *sync.WaitGroup, busy *uint64) net.Conn {
+	return &busyconn{
+		Conn:   c,
+		busy:   busy,
+		busywg: wg,
+	}
+}
+
+// Read TODO(rjeczalik)
+func (c *busyconn) Read(p []byte) (int, error) {
+	atomic.AddUint64(c.busy, 1)
+	c.busywg.Wait()
+	return c.Conn.Read(p)
+}
+
+// Write TODO(rjeczalik)
+func (c *busyconn) Write(p []byte) (int, error) {
+	atomic.AddUint64(c.busy, 1)
+	c.busywg.Wait()
+	return c.Conn.Write(p)
 }

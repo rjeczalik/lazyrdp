@@ -12,6 +12,8 @@ import (
 	"net"
 	"strconv"
 	"sync"
+	"sync/atomic"
+	"time"
 )
 
 func nonil(err ...error) error {
@@ -27,13 +29,15 @@ func nonil(err ...error) error {
 type Proxy struct {
 	MachineName string // VirtualBox machine name
 	Addr        string // network address to listen on, default is ":5000"
-	Port        int    // RDP port of the machine's server, default is 3389
+	Port        int    // target port of the machine, default is 3389
 
-	listener net.Listener
-	errch    chan error
-	vbox     *VirtualBox
-	done     int32
-	cnt      uint64
+	lis     net.Listener
+	liswg   sync.WaitGroup
+	errch   chan error
+	vbox    *VirtualBox
+	vboxwg  sync.WaitGroup
+	running int32
+	busy    uint64
 }
 
 func (p *Proxy) addr() string {
@@ -57,8 +61,39 @@ func (p *Proxy) err() chan error {
 	return p.errch
 }
 
-func (p *Proxy) loop() {
+func (p *Proxy) eventloop() {
+	done := make(chan struct{})
+	go func() {
+		p.liswg.Wait()
+		close(done)
+	}()
+	for atomic.LoadInt32(&p.running) == 1 {
+		select {
+		case <-done:
+			if err := p.vbox.Close(); err != nil {
+				if ok, e := p.vbox.Running(); e != nil || ok {
+					log.Println("vbox stop error:", err)
+					continue
+				}
+			}
+			atomic.StoreInt32(&p.running, 0)
+			log.Println("vbox stopped:", p.MachineName)
+			return
+		default:
+			time.Sleep(time.Second)
+		}
+	}
+}
 
+// Stop TODO(rjeczalik): discard vbox saved state
+func (p *Proxy) Stop() {
+	p.err() <- p.lis.Close()
+}
+
+func (p *Proxy) drop(c net.Conn, v ...interface{}) {
+	c.Close()
+	p.liswg.Done()
+	log.Println(v...)
 }
 
 // Run TODO(rjeczalik)
@@ -67,37 +102,52 @@ func (p *Proxy) Run() error {
 	if err != nil {
 		return err
 	}
-	addr, err := vbox.Addr()
-	if err != nil {
-		return err
-	}
 	l, err := InterruptibleListen("tcp", p.addr())
 	if err != nil {
 		return err
 	}
 	p.vbox = vbox
-	p.listener = l
-	addr = addr + ":" + strconv.Itoa(p.port())
-	log.Printf("proxy listening on %s, target is %s . . .", p.listener.Addr(), addr)
+	p.lis = l
+	log.Printf("proxy listening on %s . . .", p.lis.Addr())
 AcceptLoop:
 	for {
-		src, err := p.listener.Accept()
+		src, err := p.lis.Accept()
 		switch err {
 		case nil:
 		case ErrInterrupted:
 			break AcceptLoop
 		default:
-			log.Print("accept error:", err)
+			log.Println("accept error:", err)
 			continue AcceptLoop
 		}
-		dst, err := net.Dial("tcp", addr)
+		p.liswg.Add(1) // account connection
+		switch ok, err := p.vbox.Running(); {
+		case err != nil:
+			p.drop(src, "vbox error:", err)
+			continue AcceptLoop
+		case !ok:
+			if err := p.vbox.Start(); err != nil {
+				p.drop(src, "vbox start error:", err)
+				continue AcceptLoop
+			}
+			log.Println("vbox started:", p.MachineName)
+			if atomic.CompareAndSwapInt32(&p.running, 0, 1) {
+				go p.eventloop()
+			}
+		}
+		addr, err := vbox.Addr()
 		if err != nil {
-			src.Close()
-			log.Print("dial error:", err)
+			p.drop(src, "addr error:", err)
 			continue
 		}
-		log.Print("accepted new connection")
-		go p.serve(src, dst)
+		addr = addr + ":" + strconv.Itoa(p.port())
+		dst, err := net.Dial("tcp", addr)
+		if err != nil {
+			p.drop(src, "dial error:", err)
+			continue
+		}
+		log.Printf("proxying %v -> %v . . .", src.RemoteAddr(), addr)
+		go p.serve(BusyConn(src, &p.vboxwg, &p.busy), dst)
 	}
 	return <-p.err()
 }
@@ -107,20 +157,16 @@ func (p *Proxy) serve(src, dst net.Conn) {
 	wg.Add(2)
 	go func() {
 		io.Copy(src, dst)
-		log.Print("src -> dst done")
+		log.Println("[dbg] src -> dst done")
 		wg.Done()
 	}()
 	go func() {
 		io.Copy(dst, src)
-		log.Print("dst -> src done")
+		log.Println("[dbg] dst -> src done")
 		wg.Done()
 	}()
 	wg.Wait()
 	dst.Close()
 	src.Close()
-}
-
-// Stop TODO(rjeczalik)
-func (p *Proxy) Stop() {
-	p.err() <- p.listener.Close()
+	p.liswg.Done()
 }
